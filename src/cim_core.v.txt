@@ -1,0 +1,38 @@
+`timescale 1ns / 1ps
+//////////////////////////////////////////////////////////////////////////////////
+// Company: 
+// Engineer: 
+// 
+// Create Date: 27.02.2026 08:13:57
+// Design Name: 
+// Module Name: cim_core
+// Project Name: 
+// Target Devices: 
+// Tool Versions: 
+// Description: 
+// 
+// Dependencies: 
+// 
+// Revision:
+// Revision 0.01 - File Created
+// Additional Comments:
+// 
+//////////////////////////////////////////////////////////////////////////////////
+
+
+module cim_core #
+(
+    parameter WIDTH = 32
+)
+(
+    input [WIDTH-1:0] data1,
+    input [WIDTH-1:0] data2,
+    input mode, // 0 = XOR, 1 = XNOR
+    output [WIDTH-1:0] result
+);
+
+assign result = (mode == 0) ? 
+                (data1 ^ data2) :
+                ~(data1 ^ data2);
+
+endmodule
