@@ -1,0 +1,38 @@
+`timescale 1ns / 1ps
+//////////////////////////////////////////////////////////////////////////////////
+// Company: 
+// Engineer: 
+// 
+// Create Date: 07.01.2026 21:23:14
+// Design Name: 
+// Module Name: sram_cell
+// Project Name: 
+// Target Devices: 
+// Tool Versions: 
+// Description: 
+// 
+// Dependencies: 
+// 
+// Revision:
+// Revision 0.01 - File Created
+// Additional Comments:
+// 
+//////////////////////////////////////////////////////////////////////////////////
+
+
+module sram_cell (
+    input  wire clk,
+    input  wire wl,
+    input  wire din,
+    output reg  dout
+);
+
+always @(posedge clk) begin
+    if (wl)
+        dout <= din;
+end
+
+endmodule
+
+
+   
