@@ -1,0 +1,53 @@
+`timescale 1ns / 1ps
+
+module tb_cim_top;
+
+parameter WIDTH = 128;
+parameter DEPTH = 256;
+
+reg clk;
+reg rst;
+reg start;
+reg [1:0] mode;
+reg [$clog2(DEPTH)-1:0] addr1;
+reg [$clog2(DEPTH)-1:0] addr2;
+
+wire done;
+wire [WIDTH-1:0] result;
+wire [7:0] score;
+
+// DUT instantiation
+cim_top #(.WIDTH(WIDTH), .DEPTH(DEPTH)) uut (
+    .clk(clk),
+    .rst(rst),
+    .start(start),
+    .mode(mode),
+    .addr1(addr1),
+    .addr2(addr2),
+    .done(done),
+    .result(result),
+    .score(score)        // ? THIS WAS MISSING
+);
+
+// Clock generation
+always #5 clk = ~clk;
+
+initial begin
+
+    clk = 0;
+    rst = 1;
+    start = 0;
+    mode = 2'b00;
+    addr1 = 0;
+    addr2 = 1;
+
+    #20 rst = 0;
+
+    // ? FIXED START PULSE
+    #10 start = 1;
+    #10 start = 0;
+
+    #40 mode = 2'b01;  // XNOR
+
+end
+endmodule
