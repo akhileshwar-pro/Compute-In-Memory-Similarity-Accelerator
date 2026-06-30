@@ -1,0 +1,154 @@
+module cim_top #
+(
+    parameter WIDTH = 128,
+    parameter DEPTH = 256,
+    parameter THRESHOLD = 8'd64
+)
+(
+    input clk,
+    input rst,
+    input start,
+    input [1:0] mode,   // 00 = XOR, 01 = XNOR, 10 = AND, 11 = OR
+    input [$clog2(DEPTH)-1:0] addr1,
+    input [$clog2(DEPTH)-1:0] addr2,
+    output reg done,
+    output reg [WIDTH-1:0] result,
+    output reg [7:0] score,
+    output reg match
+);
+
+// ========================
+// Memory Outputs
+// ========================
+
+wire [WIDTH-1:0] mem_out1;
+wire [WIDTH-1:0] mem_out2;
+
+// ========================
+// Memory Instances
+// ========================
+
+cim_memory #(.WIDTH(WIDTH), .DEPTH(DEPTH)) mem1 (
+    .clk(clk),
+    .we(1'b0),
+    .addr(addr1),
+    .din({WIDTH{1'b0}}),
+    .dout(mem_out1)
+);
+
+cim_memory #(.WIDTH(WIDTH), .DEPTH(DEPTH)) mem2 (
+    .clk(clk),
+    .we(1'b0),
+    .addr(addr2),
+    .din({WIDTH{1'b0}}),
+    .dout(mem_out2)
+);
+
+// ========================
+// Pipeline Registers
+// ========================
+
+// Stage 1 Registers (Memory Output)
+reg [WIDTH-1:0] stage1_data1;
+reg [WIDTH-1:0] stage1_data2;
+
+// Stage 2 Register (Compute Output)
+reg [WIDTH-1:0] stage2_result;
+
+// Popcount wire
+wire [7:0] similarity_score;
+
+// ========================
+// NEW: Result Gate Wire
+// ========================
+
+(* keep = "true" *)wire [WIDTH-1:0] gated_result;
+
+// ========================
+// Stage 1: Capture Memory
+// ========================
+
+always @(posedge clk)
+begin
+    stage1_data1 <= mem_out1;
+    stage1_data2 <= mem_out2;
+end
+
+// ========================
+// Stage 2: Compute Logic
+// ========================
+
+// ========================
+// Parallel CIM Cores
+// ========================
+
+parameter NUM_CORES = 8;
+
+(* keep = "true" *) wire [WIDTH-1:0] core_result [0:NUM_CORES-1];
+
+genvar i;
+
+generate
+for(i=0;i<NUM_CORES;i=i+1)
+begin : CIM_CORES
+
+cim_core #(.WIDTH(WIDTH)) core_inst (
+    .data1(stage1_data1),
+    .data2(stage1_data2),
+    .mode(mode[0]),
+    .result(core_result[i])
+);
+
+end
+endgenerate
+
+// Use first core output
+always @(posedge clk)
+begin
+    stage2_result <= core_result[0];
+end
+
+// ========================
+// Popcount Unit
+// ========================
+
+popcount #(.WIDTH(WIDTH)) pop_unit (
+    .data_in(stage2_result),
+    .count(similarity_score)
+);
+
+// ========================
+// Result Gate (NEW)
+// ========================
+
+assign gated_result = match ? stage2_result : {WIDTH{1'b0}};
+
+// ========================
+// Stage 3: Output Register
+// ========================
+
+always @(posedge clk or posedge rst)
+begin
+    if (rst)
+    begin
+        result <= 0;
+        score <= 0;
+        done <= 0;
+        match <= 0;
+    end
+    else
+    begin
+        score <= similarity_score;
+        done <= start;
+
+        if(similarity_score >= THRESHOLD)
+            match <= 1;
+        else
+            match <= 0;
+
+        // gated output
+        result <= gated_result;
+    end
+end
+
+endmodule
